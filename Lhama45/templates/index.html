@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Lhama45</title>
+</head>
+<body>
+
+<h1>Lhama45</h1>
+
+<input id="texto" placeholder="Digite sua pergunta">
+<button onclick="perguntar()">Perguntar</button>
+
+<p id="resposta"></p>
+
+<script>
+function perguntar() {
+    fetch("/perguntar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            texto: document.getElementById("texto").value
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        document.getElementById("resposta").innerText = d.resposta;
+    });
+}
+</script>
+
+</body>
+</html>
