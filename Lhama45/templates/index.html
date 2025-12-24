@@ -11,29 +11,66 @@ body {
     background: #343541;
     color: #ececf1;
     font-family: Arial, Helvetica, sans-serif;
-    display: flex;
-    flex-direction: column;
     height: 100vh;
+    display: flex;
 }
 
-/* HEADER */
-.topo {
-    padding: 15px;
+/* SIDEBAR */
+#sidebar {
+    width: 260px;
     background: #202123;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    font-weight: bold;
-    font-size: 18px;
+    flex-direction: column;
+    padding: 10px;
 }
 
-.topo img {
-    height: 36px;
-    width: auto;
+#nova-conversa {
+    background: #343541;
+    border: 1px solid #555;
+    color: #ececf1;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+#lista-conversas {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.conversa {
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 5px;
+    background: #2a2b32;
+}
+
+.conversa:hover {
+    background: #3e3f4b;
 }
 
 /* CHAT */
+#main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background: #202123;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+}
+
+header img {
+    height: 32px;
+}
+
 #chat {
     flex: 1;
     overflow-y: auto;
@@ -49,29 +86,27 @@ body {
     white-space: pre-wrap;
 }
 
-/* Usuário */
 .user {
     background: #444654;
     border-left: 4px solid #19c37d;
 }
 
-/* IA */
 .bot {
     background: #3e3f4b;
     border-left: 4px solid #8ab4f8;
 }
 
-/* FOOTER */
+/* INPUT */
 footer {
-    padding: 15px;
     background: #202123;
+    padding: 15px;
 }
 
 #form {
-    display: flex;
-    gap: 10px;
     max-width: 750px;
     margin: 0 auto;
+    display: flex;
+    gap: 10px;
 }
 
 #input {
@@ -79,7 +114,6 @@ footer {
     padding: 14px;
     border-radius: 6px;
     border: none;
-    outline: none;
     font-size: 16px;
 }
 
@@ -91,73 +125,122 @@ button {
     cursor: pointer;
     font-size: 16px;
 }
-
-button:hover {
-    opacity: 0.9;
-}
 </style>
 </head>
 
 <body>
 
-<header class="topo">
-    <img src="/static/logo.png" alt="Lhama45">
-    <span>Lhama45</span>
-</header>
+<!-- SIDEBAR -->
+<div id="sidebar">
+    <button id="nova-conversa" onclick="criarConversa()">+ Nova conversa</button>
+    <div id="lista-conversas"></div>
+</div>
 
-<div id="chat"></div>
+<!-- CHAT -->
+<div id="main">
+    <header>
+        <img src="/static/logo.png">
+        <span>Lhama45</span>
+    </header>
 
-<footer>
-    <form id="form" onsubmit="enviar(event)">
-        <input id="input" placeholder="Digite sua mensagem..." autocomplete="off">
-        <button>Enviar</button>
-    </form>
-</footer>
+    <div id="chat"></div>
+
+    <footer>
+        <form id="form" onsubmit="enviar(event)">
+            <input id="input" placeholder="Digite sua mensagem..." autocomplete="off">
+            <button>Enviar</button>
+        </form>
+    </footer>
+</div>
 
 <script>
-const chat = document.getElementById("chat");
+let conversas = JSON.parse(localStorage.getItem("lhama45_conversas")) || {};
+let conversaAtual = localStorage.getItem("lhama45_atual");
 
-/* Carrega histórico salvo */
-const historico = JSON.parse(localStorage.getItem("lhama45_historico")) || [];
-historico.forEach(msg => adicionarMensagem(msg.texto, msg.tipo, false));
+/* Criar conversa */
+function criarConversa() {
+    const id = "chat_" + Date.now();
+    conversas[id] = [];
+    conversaAtual = id;
+    salvar();
+    renderSidebar();
+    renderChat();
+}
 
+/* Render sidebar */
+function renderSidebar() {
+    const lista = document.getElementById("lista-conversas");
+    lista.innerHTML = "";
+
+    Object.keys(conversas).forEach(id => {
+        const div = document.createElement("div");
+        div.className = "conversa";
+        div.innerText = "Conversa " + id.slice(-4);
+        div.onclick = () => {
+            conversaAtual = id;
+            salvar();
+            renderChat();
+        };
+        lista.appendChild(div);
+    });
+}
+
+/* Render chat */
+function renderChat() {
+    const chat = document.getElementById("chat");
+    chat.innerHTML = "";
+
+    if (!conversaAtual) return;
+
+    conversas[conversaAtual].forEach(m => {
+        const div = document.createElement("div");
+        div.className = "msg " + m.tipo;
+        div.textContent = m.texto;
+        chat.appendChild(div);
+    });
+
+    chat.scrollTop = chat.scrollHeight;
+}
+
+/* Enviar */
 async function enviar(e) {
     e.preventDefault();
-
     const input = document.getElementById("input");
     const texto = input.value.trim();
-    if (!texto) return;
+    if (!texto || !conversaAtual) return;
 
-    adicionarMensagem(texto, "user");
+    conversas[conversaAtual].push({ texto, tipo: "user" });
     input.value = "";
+    renderChat();
+    salvar();
 
     try {
-        const resp = await fetch("/perguntar", {
+        const r = await fetch("/perguntar", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ texto })
         });
-
-        const data = await resp.json();
-        adicionarMensagem(data.resposta, "bot");
-
-    } catch (err) {
-        adicionarMensagem("Erro ao conectar com o servidor.", "bot");
+        const data = await r.json();
+        conversas[conversaAtual].push({ texto: data.resposta, tipo: "bot" });
+        renderChat();
+        salvar();
+    } catch {
+        conversas[conversaAtual].push({ texto: "Erro de conexão.", tipo: "bot" });
+        renderChat();
+        salvar();
     }
 }
 
-function adicionarMensagem(texto, tipo, salvar = true) {
-    const div = document.createElement("div");
-    div.className = "msg " + tipo;
-    div.textContent = texto;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-
-    if (salvar) {
-        historico.push({ texto, tipo });
-        localStorage.setItem("lhama45_historico", JSON.stringify(historico));
-    }
+/* Salvar */
+function salvar() {
+    localStorage.setItem("lhama45_conversas", JSON.stringify(conversas));
+    localStorage.setItem("lhama45_atual", conversaAtual);
 }
+
+/* Inicialização */
+if (!conversaAtual) criarConversa();
+renderSidebar();
+renderChat();
 </script>
 
 </body>
