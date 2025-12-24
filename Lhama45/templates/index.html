@@ -16,13 +16,24 @@ body {
     height: 100vh;
 }
 
-header {
+/* HEADER */
+.topo {
     padding: 15px;
     background: #202123;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
     font-weight: bold;
+    font-size: 18px;
 }
 
+.topo img {
+    height: 36px;
+    width: auto;
+}
+
+/* CHAT */
 #chat {
     flex: 1;
     overflow-y: auto;
@@ -50,6 +61,7 @@ header {
     border-left: 4px solid #8ab4f8;
 }
 
+/* FOOTER */
 footer {
     padding: 15px;
     background: #202123;
@@ -88,7 +100,10 @@ button:hover {
 
 <body>
 
-<header>Lhama45</header>
+<header class="topo">
+    <img src="/static/logo.png" alt="Lhama45">
+    <span>Lhama45</span>
+</header>
 
 <div id="chat"></div>
 
@@ -102,7 +117,7 @@ button:hover {
 <script>
 const chat = document.getElementById("chat");
 
-/* 🔹 Carrega histórico salvo */
+/* Carrega histórico salvo */
 const historico = JSON.parse(localStorage.getItem("lhama45_historico")) || [];
 historico.forEach(msg => adicionarMensagem(msg.texto, msg.tipo, false));
 
