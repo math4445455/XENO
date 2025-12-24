@@ -1,22 +1,11 @@
-import os
-import webbrowser
 from flask import Flask, request, jsonify, render_template
-from llm import gerar_resposta
+from openai import OpenAI
+import os
 
-base_dir = os.path.abspath(os.path.dirname(__file__))
+app = Flask(__name__)
 
-app = Flask(
-    __name__,
-    template_folder=os.path.join(base_dir, "templates")
-)
-
-# Memória simples da conversa
-historico = [
-    {
-        "role": "system",
-        "content": "Você é a Lhama45, uma IA educada, clara e objetiva que responde em português."
-    }
-]
+# Cliente OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @app.route("/")
 def index():
@@ -24,24 +13,23 @@ def index():
 
 @app.route("/perguntar", methods=["POST"])
 def perguntar():
-    global historico
+    data = request.get_json()
+    pergunta = data.get("texto", "")
 
-    dados = request.json
-    pergunta = dados.get("texto", "").strip()
-
-    if pergunta == "":
+    if pergunta.strip() == "":
         return jsonify({"resposta": "Digite uma pergunta."})
 
-    historico.append({"role": "user", "content": pergunta})
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Você é a Lhama45, uma IA inteligente e amigável."},
+                {"role": "user", "content": pergunta}
+            ]
+        )
 
-    resposta = gerar_resposta(historico)
+        resposta = response.choices[0].message.content
+        return jsonify({"resposta": resposta})
 
-    historico.append({"role": "assistant", "content": resposta})
-
-    # Limita memória (economia de tokens)
-    historico = historico[-10:]
-
-    return jsonify({"resposta": resposta})
-
-if __name__ == "__main__":
-   app.run(host="0.0.0.0", port=10000)
+    except Exception as e:
+        return jsonify({"resposta": f"Erro na IA: {str(e)}"})
