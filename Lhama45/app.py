@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import requests
+import os
 
 app = Flask(__name__)
 
@@ -17,8 +18,9 @@ def perguntar():
         imagens = buscar_imagens(texto)
         return jsonify({"imagens": imagens})
 
-    resposta = f"Você perguntou: {texto}\n\n(Essa resposta pode ser ligada à API OpenAI)"
-    return jsonify({"resposta": resposta})
+    return jsonify({
+        "resposta": f"Você perguntou: {texto}\n\n(Essa resposta pode ser ligada à API OpenAI)"
+    })
 
 def buscar_imagens(consulta):
     base = "https://source.unsplash.com/featured/?"
@@ -29,4 +31,5 @@ def buscar_imagens(consulta):
     ]
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
