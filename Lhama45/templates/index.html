@@ -43,12 +43,7 @@ header {
     font-weight: bold;
 }
 
-/* Logo */
-#logo {
-    font-size: 18px;
-}
-
-/* Menu Button */
+#logo { font-size: 18px; }
 #menuBtn {
     font-size: 24px;
     cursor: pointer;
@@ -70,21 +65,12 @@ header {
     overflow-y: auto;
 }
 
-#sidebar.open {
-    right: 0;
-}
+#sidebar.open { right: 0; }
 
-#sidebar h3 {
-    margin-top: 0;
-    font-size: 16px;
-}
-
-/* Sidebar buttons */
 .sidebar-btn {
-    display: block;
     width: 100%;
-    margin: 8px 0;
     padding: 10px;
+    margin-bottom: 10px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -95,8 +81,9 @@ header {
 }
 
 /* Histórico */
-#historico {
-    margin-top: 16px;
+#historico h3 {
+    margin: 10px 0;
+    font-size: 15px;
 }
 
 .conversa {
@@ -108,8 +95,8 @@ header {
     font-size: 14px;
 }
 
-.conversa:hover {
-    opacity: 0.85;
+.conversa.ativa {
+    outline: 2px solid #19c37d;
 }
 
 /* Chat */
@@ -136,6 +123,11 @@ header {
 .bot {
     background: var(--bot);
     border-left: 4px solid #8ab4f8;
+}
+
+.typing {
+    font-style: italic;
+    opacity: 0.8;
 }
 
 /* Footer */
@@ -178,12 +170,8 @@ button {
     <div id="menuBtn">☰</div>
 </header>
 
-<!-- Sidebar -->
 <div id="sidebar">
-    <h3>Configurações</h3>
-
-    <button class="sidebar-btn" onclick="setTema('dark')">Tema escuro</button>
-    <button class="sidebar-btn" onclick="setTema('light')">Tema claro</button>
+    <button class="sidebar-btn" onclick="novoChat()">Novo chat</button>
 
     <div id="historico">
         <h3>Conversas</h3>
@@ -205,55 +193,59 @@ const menuBtn = document.getElementById("menuBtn");
 const chat = document.getElementById("chat");
 const historicoDiv = document.getElementById("historico");
 
-menuBtn.onclick = () => {
-    sidebar.classList.toggle("open");
-};
+menuBtn.onclick = () => sidebar.classList.toggle("open");
 
 /* Tema */
-function setTema(tema) {
-    if (tema === "light") {
-        document.body.classList.add("light");
-    } else {
-        document.body.classList.remove("light");
-    }
-    localStorage.setItem("lhama45_tema", tema);
-}
-
 const temaSalvo = localStorage.getItem("lhama45_tema");
-if (temaSalvo === "light") {
-    document.body.classList.add("light");
-}
+if (temaSalvo === "light") document.body.classList.add("light");
 
-/* Histórico simples por sessão */
-let conversas = JSON.parse(localStorage.getItem("lhama45_conversas")) || [];
+/* Conversas */
+let conversas = JSON.parse(localStorage.getItem("lhama45_conversas")) || [[]];
+let conversaAtual = 0;
 
 function atualizarHistorico() {
     historicoDiv.innerHTML = "<h3>Conversas</h3>";
-    conversas.forEach((c, i) => {
+    conversas.forEach((_, i) => {
         const div = document.createElement("div");
-        div.className = "conversa";
-        div.textContent = "Conversa " + (i + 1);
+        div.className = "conversa" + (i === conversaAtual ? " ativa" : "");
+        div.textContent = "Chat " + (i + 1);
         div.onclick = () => carregarConversa(i);
         historicoDiv.appendChild(div);
     });
 }
 
-function carregarConversa(index) {
+function carregarConversa(i) {
+    conversaAtual = i;
     chat.innerHTML = "";
-    conversas[index].forEach(msg => adicionarMensagem(msg.texto, msg.tipo, false));
+    conversas[i].forEach(m => adicionarMensagem(m.texto, m.tipo, false));
+    atualizarHistorico();
+}
+
+function novoChat() {
+    conversas.unshift([]);
+    conversaAtual = 0;
+    chat.innerHTML = "";
+    salvar();
+}
+
+function salvar() {
+    localStorage.setItem("lhama45_conversas", JSON.stringify(conversas));
+    atualizarHistorico();
 }
 
 atualizarHistorico();
 
+/* Enviar mensagem */
 async function enviar(e) {
     e.preventDefault();
-
     const input = document.getElementById("input");
     const texto = input.value.trim();
     if (!texto) return;
 
     adicionarMensagem(texto, "user");
     input.value = "";
+
+    const typing = adicionarMensagem("Lhama45 está digitando...", "bot typing", false);
 
     try {
         const resp = await fetch("/perguntar", {
@@ -263,32 +255,30 @@ async function enviar(e) {
         });
 
         const data = await resp.json();
+        typing.remove();
         adicionarMensagem(data.resposta, "bot");
-
-        salvarConversa();
+        salvar();
 
     } catch {
+        typing.remove();
         adicionarMensagem("Erro ao conectar com o servidor.", "bot");
     }
 }
 
-function adicionarMensagem(texto, tipo, salvar = true) {
+function adicionarMensagem(texto, tipo, salvarMsg = true) {
     const div = document.createElement("div");
     div.className = "msg " + tipo;
     div.textContent = texto;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
-}
 
-function salvarConversa() {
-    const msgs = Array.from(chat.children).map(div => ({
-        texto: div.textContent,
-        tipo: div.classList.contains("user") ? "user" : "bot"
-    }));
-
-    conversas[0] = msgs;
-    localStorage.setItem("lhama45_conversas", JSON.stringify(conversas));
-    atualizarHistorico();
+    if (salvarMsg) {
+        conversas[conversaAtual].push({
+            texto,
+            tipo: tipo.includes("user") ? "user" : "bot"
+        });
+    }
+    return div;
 }
 </script>
 
