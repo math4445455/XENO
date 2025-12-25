@@ -34,21 +34,32 @@ body {
     margin-bottom: 10px;
 }
 
-#lista-conversas {
-    flex: 1;
-    overflow-y: auto;
-}
-
 .conversa {
     padding: 10px;
     border-radius: 6px;
     cursor: pointer;
     margin-bottom: 5px;
     background: #2a2b32;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .conversa:hover {
     background: #3e3f4b;
+}
+
+.conversa span {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.delete {
+    color: #ff6b6b;
+    cursor: pointer;
+    margin-left: 8px;
 }
 
 /* CHAT */
@@ -94,6 +105,11 @@ header img {
 .bot {
     background: #3e3f4b;
     border-left: 4px solid #8ab4f8;
+}
+
+.typing {
+    opacity: 0.6;
+    font-style: italic;
 }
 
 /* INPUT */
@@ -160,14 +176,24 @@ let conversaAtual = localStorage.getItem("lhama45_atual");
 /* Criar conversa */
 function criarConversa() {
     const id = "chat_" + Date.now();
-    conversas[id] = [];
+    conversas[id] = { titulo: "Nova conversa", mensagens: [] };
     conversaAtual = id;
     salvar();
     renderSidebar();
     renderChat();
 }
 
-/* Render sidebar */
+/* Apagar conversa */
+function apagarConversa(id) {
+    if (!confirm("Apagar esta conversa?")) return;
+    delete conversas[id];
+    conversaAtual = Object.keys(conversas)[0] || null;
+    salvar();
+    renderSidebar();
+    renderChat();
+}
+
+/* Sidebar */
 function renderSidebar() {
     const lista = document.getElementById("lista-conversas");
     lista.innerHTML = "";
@@ -175,24 +201,33 @@ function renderSidebar() {
     Object.keys(conversas).forEach(id => {
         const div = document.createElement("div");
         div.className = "conversa";
-        div.innerText = "Conversa " + id.slice(-4);
-        div.onclick = () => {
+
+        const span = document.createElement("span");
+        span.innerText = conversas[id].titulo;
+        span.onclick = () => {
             conversaAtual = id;
             salvar();
             renderChat();
         };
+
+        const del = document.createElement("span");
+        del.innerText = "🗑";
+        del.className = "delete";
+        del.onclick = () => apagarConversa(id);
+
+        div.appendChild(span);
+        div.appendChild(del);
         lista.appendChild(div);
     });
 }
 
-/* Render chat */
+/* Chat */
 function renderChat() {
     const chat = document.getElementById("chat");
     chat.innerHTML = "";
-
     if (!conversaAtual) return;
 
-    conversas[conversaAtual].forEach(m => {
+    conversas[conversaAtual].mensagens.forEach(m => {
         const div = document.createElement("div");
         div.className = "msg " + m.tipo;
         div.textContent = m.texto;
@@ -209,10 +244,24 @@ async function enviar(e) {
     const texto = input.value.trim();
     if (!texto || !conversaAtual) return;
 
-    conversas[conversaAtual].push({ texto, tipo: "user" });
+    const conv = conversas[conversaAtual];
+
+    // Renomeia automaticamente pela primeira pergunta
+    if (conv.mensagens.length === 0) {
+        conv.titulo = texto.slice(0, 30);
+    }
+
+    conv.mensagens.push({ texto, tipo: "user" });
     input.value = "";
     renderChat();
     salvar();
+
+    // Animação digitando
+    const typing = document.createElement("div");
+    typing.className = "msg bot typing";
+    typing.innerText = "Lhama45 está digitando...";
+    document.getElementById("chat").appendChild(typing);
+    document.getElementById("chat").scrollTop = chat.scrollHeight;
 
     try {
         const r = await fetch("/perguntar", {
@@ -221,14 +270,15 @@ async function enviar(e) {
             body: JSON.stringify({ texto })
         });
         const data = await r.json();
-        conversas[conversaAtual].push({ texto: data.resposta, tipo: "bot" });
-        renderChat();
-        salvar();
+        typing.remove();
+        conv.mensagens.push({ texto: data.resposta, tipo: "bot" });
     } catch {
-        conversas[conversaAtual].push({ texto: "Erro de conexão.", tipo: "bot" });
-        renderChat();
-        salvar();
+        typing.remove();
+        conv.mensagens.push({ texto: "Erro de conexão.", tipo: "bot" });
     }
+
+    renderChat();
+    salvar();
 }
 
 /* Salvar */
@@ -237,8 +287,8 @@ function salvar() {
     localStorage.setItem("lhama45_atual", conversaAtual);
 }
 
-/* Inicialização */
-if (!conversaAtual) criarConversa();
+/* Init */
+if (Object.keys(conversas).length === 0) criarConversa();
 renderSidebar();
 renderChat();
 </script>
