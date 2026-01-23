@@ -1,24 +1,55 @@
-import sys
 import os
-from PySide6.QtWidgets import QApplication
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtGui import QIcon
-from PySide6.QtCore import QUrl
+from flask import Flask, request, jsonify, send_from_directory
+from dotenv import load_dotenv
+from openai import OpenAI
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-HTML_PATH = os.path.join(BASE_DIR, "publish", "index.html")
-ICON_PATH = os.path.join(BASE_DIR, "publish", "icon.png")
+if os.path.exists("key.env"):
+    load_dotenv("key.env")
+else:
+    load_dotenv()
 
-app = QApplication(sys.argv)
-app.setApplicationName("XENO")
-app.setWindowIcon(QIcon(ICON_PATH))
+API_KEY = os.getenv("OPENAI_API_KEY")
 
-view = QWebEngineView()
-view.setWindowTitle("XENO")
-view.setWindowIcon(QIcon(ICON_PATH))
-view.resize(1100, 700)
+if not API_KEY:
+    raise RuntimeError("OPENAI_API_KEY não encontrada. Verifique o arquivo key.env ou as variáveis do Render.")
 
-view.load(QUrl.fromLocalFile(HTML_PATH))
-view.show()
+client = OpenAI(api_key=API_KEY)
 
-sys.exit(app.exec())
+app = Flask(
+    __name__,
+    static_folder="static",
+    template_folder="templates"
+)
+
+@app.route("/")
+def index():
+    return send_from_directory("static", "index.html")
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    data = request.json
+    mensagem = data.get("message", "").strip()
+
+    if not mensagem:
+        return jsonify({"error": "Mensagem vazia"}), 400
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Você é XENO, uma IA assistente inteligente, clara e amigável."},
+                {"role": "user", "content": mensagem}
+            ]
+        )
+
+        resposta = response.choices[0].message.content
+        return jsonify({"reply": resposta})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
