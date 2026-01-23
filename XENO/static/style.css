@@ -1,0 +1,73 @@
+:root {
+  --bg: #0f0f0f;
+  --text: #fff;
+  --box: #1e1e1e;
+}
+
+.light {
+  --bg: #f5f5f5;
+  --text: #000;
+  --box: #ffffff;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background: var(--box);
+}
+
+#chat {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.message {
+  margin: 8px 0;
+}
+
+.user { text-align: right; }
+.bot { text-align: left; }
+
+footer {
+  display: flex;
+  padding: 10px;
+  background: var(--box);
+}
+
+footer input {
+  flex: 1;
+  padding: 8px;
+}
+
+#typing {
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.hidden {
+  display: none;
+}
+
+/* CONFIGURAÇÕES */
+.settings {
+  position: fixed;
+  top: 60px;
+  right: 10px;
+  background: var(--box);
+  padding: 15px;
+  border-radius: 10px;
+  z-index: 10;
+}
