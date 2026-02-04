@@ -1,4 +1,3 @@
 Flask
 gemini
-guincorn
 python-dotenv
