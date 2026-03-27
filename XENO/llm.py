@@ -1,28 +1,26 @@
 import os
 import google.generativeai as genai
+from dotenv import load_dotenv
 
-# O Render vai ler a chave que você colocou no painel Environment
-api_key = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=api_key)
+load_dotenv()
+
+# Tenta pegar do .env ou das variáveis de ambiente do Render
+chave = os.getenv("GEMINI_API_KEY")
+
+if not chave:
+    raise ValueError("A chave GEMINI_API_KEY não foi encontrada nas variáveis de ambiente!")
+
+genai.configure(api_key=chave)
 
 model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",
     system_instruction="Você é a XENO, uma IA educada, clara e objetiva que responde em português."
 )
 
-def gerar_resposta(historico):
-    # Converte o histórico do formato OpenAI para o formato Gemini
-    gemini_history = []
-    for msg in historico:
-        role = "user" if msg["role"] == "user" else "model"
-        # Ignora mensagens de 'system' que o Gemini já recebeu na config do model
-        if msg["role"] != "system":
-            gemini_history.append({"role": role, "parts": [msg["content"]]})
+def gerar_resposta(mensagens):
+    # O Gemini precisa de um formato específico. Vamos converter o que vem do app.py
+    # O app.py envia uma lista de dicts. Vamos pegar apenas o conteúdo da última.
+    pergunta_usuario = mensagens[-1]["content"]
     
-    # Pega a última mensagem enviada
-    ultima_msg = gemini_history.pop()["parts"][0]
-    
-    chat = model.start_chat(history=gemini_history)
-    response = chat.send_message(ultima_msg)
-    
+    response = model.generate_content(pergunta_usuario)
     return response.text
