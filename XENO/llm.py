@@ -1,4 +1,8 @@
+import os
 import google.generativeai as genai
+
+# O Render vai "injetar" a chave aqui automaticamente
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Coloque sua chave real aqui entre as aspas
 genai.configure(api_key="AIzaSyBDJAmAgvq8arTBARoBuFRkeFeMxuyxMIQ")
