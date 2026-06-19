@@ -9,10 +9,8 @@ def perguntar():
 
     historico.append({"role": "user", "content": pergunta})
     
-    # Chama a função atualizada do llm.py
     resposta = gerar_resposta(historico)
 
-    # O Gemini usa 'model', mas para manter seu histórico interno:
     historico.append({"role": "assistant", "content": resposta})
     historico = historico[-10:]
 
